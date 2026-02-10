@@ -1,19 +1,13 @@
 # ============================
-# Stage 1: Build Dependencies
+# Stage 1: Build Laravel
 # ============================
 FROM php:8.3-fpm AS build
 
-# Install system dependencies
+# Install system dependencies + PHP extensions
 RUN apt-get update && apt-get install -y \
-    git \
-    unzip \
-    zip \
-    libzip-dev \
-    libicu-dev \
-    libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
-    libonig-dev \
+    git unzip zip \
+    libzip-dev libicu-dev \
+    libpng-dev libjpeg-dev libfreetype6-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
         intl \
@@ -21,7 +15,7 @@ RUN apt-get update && apt-get install -y \
         zip \
         pdo_mysql \
         fileinfo \
-    && apt-get clean \
+        exif \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
@@ -29,30 +23,28 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www
 
-# Copy Laravel files
+# Copy Laravel source code
 COPY . .
 
-# Install Laravel dependencies
+# Install dependencies without dev
 RUN composer install --no-dev --optimize-autoloader
 
-# Optimize Laravel caches
+# Cache Laravel config/routes/views
 RUN php artisan config:cache && \
     php artisan route:cache && \
     php artisan view:cache
+
 
 # ============================
 # Stage 2: Runtime Image
 # ============================
 FROM php:8.3-fpm
 
-# Install runtime extensions again
+# Install runtime dependencies + extensions again
 RUN apt-get update && apt-get install -y \
-    libzip-dev \
-    libicu-dev \
-    libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
     nginx \
+    libzip-dev libicu-dev \
+    libpng-dev libjpeg-dev libfreetype6-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
         intl \
@@ -60,23 +52,27 @@ RUN apt-get update && apt-get install -y \
         zip \
         pdo_mysql \
         fileinfo \
-    && apt-get clean \
+        exif \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /var/www
 
-# Copy app from build stage
+# Copy Laravel app from build stage
 COPY --from=build /var/www /var/www
 
-# Copy nginx config
+# Copy Nginx config
 COPY nginx.conf /etc/nginx/nginx.conf
 
-# Permission fix
-RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
+# Fix Laravel permission
+RUN chown -R www-data:www-data \
+    /var/www/storage \
+    /var/www/bootstrap/cache
 
-# Expose port
+# Copy entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Railway uses PORT env variable
 EXPOSE 8080
 
-# Start Nginx + PHP-FPM
-CMD service nginx start && php-fpm
+CMD ["/entrypoint.sh"]
