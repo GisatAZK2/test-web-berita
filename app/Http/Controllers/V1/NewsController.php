@@ -68,6 +68,12 @@ class NewsController extends Controller
             $filename = pathinfo($image->getClientOriginalName(), PATHINFO_FILENAME);
             $filename = $filename . '-' . time() . '.webp';
 
+            $dir = storage_path("app/public/news");
+
+            if (!file_exists($dir)) {
+                mkdir($dir, 0755, true);
+            }
+
             $img = Image::read($image)->encodeByExtension('webp', quality: 90);
             $img->save(storage_path('app/public/news/' . $filename));
 
