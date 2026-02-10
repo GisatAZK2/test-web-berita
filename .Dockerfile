@@ -8,7 +8,11 @@ RUN apt-get update && apt-get install -y \
     git unzip zip \
     libzip-dev libicu-dev \
     libpng-dev libjpeg-dev libfreetype6-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    libwebp-dev \
+    && docker-php-ext-configure gd \
+        --with-freetype \
+        --with-jpeg \
+        --with-webp \
     && docker-php-ext-install \
         intl \
         gd \
@@ -45,7 +49,11 @@ RUN apt-get update && apt-get install -y \
     nginx \
     libzip-dev libicu-dev \
     libpng-dev libjpeg-dev libfreetype6-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    libwebp-dev \
+    && docker-php-ext-configure gd \
+        --with-freetype \
+        --with-jpeg \
+        --with-webp \
     && docker-php-ext-install \
         intl \
         gd \
