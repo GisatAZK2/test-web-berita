@@ -1,33 +1,35 @@
 #!/bin/bash
+set -e
 
-echo "🚀 Starting Laravel Container..."
+echo "🚀 Starting Laravel on Railway..."
 
-# Ensure correct permission
-chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
+# Railway does NOT use .env file
+echo "✅ Using Railway Environment Variables"
 
-# Storage link (for public image access)
-if [ ! -L "/var/www/public/storage" ]; then
+# Fix permissions
+chown -R www-data:www-data storage bootstrap/cache
+
+# Storage link
+if [ ! -L "public/storage" ]; then
     echo "🔗 Creating storage link..."
     php artisan storage:link || true
 fi
 
-# Generate APP_KEY if missing
-if [ -z "$APP_KEY" ]; then
-    echo "🔑 APP_KEY missing, generating..."
-    php artisan key:generate --force
-else
-    echo "✅ APP_KEY already set"
-fi
+# Clear cache (important in Railway)
+echo "⚡ Clearing caches..."
+php artisan optimize:clear
 
-# Clear and cache config
-echo "⚡ Optimizing config cache..."
-php artisan config:clear
+# Run migrations automatically
+echo "📦 Running migrations..."
+php artisan migrate --force
+
+# Cache config for performance
+echo "⚡ Caching config..."
 php artisan config:cache
+php artisan route:cache
+php artisan view:cache
 
-# Optional: migrate database automatically (enable if needed)
-# php artisan migrate --force
-
-# Start services
+# Start nginx + php-fpm
 echo "🌐 Starting Nginx..."
 service nginx start
 
