@@ -3,11 +3,15 @@ set -e
 
 echo "🚀 Starting Laravel on Railway..."
 
-# Railway does NOT use .env file
-echo "✅ Using Railway Environment Variables"
-
-# Fix permissions
+# Fix permission
 chown -R www-data:www-data storage bootstrap/cache
+
+# IMPORTANT: delete cached config manually
+echo "🧹 Removing old cached config..."
+rm -f bootstrap/cache/config.php
+rm -f bootstrap/cache/routes.php
+rm -f bootstrap/cache/services.php
+rm -f bootstrap/cache/packages.php
 
 # Storage link
 if [ ! -L "public/storage" ]; then
@@ -15,21 +19,20 @@ if [ ! -L "public/storage" ]; then
     php artisan storage:link || true
 fi
 
-# Clear cache (important in Railway)
-echo "⚡ Clearing caches..."
-php artisan optimize:clear
+# Show DB config for debug
+echo "📌 Current DB_CONNECTION=$DB_CONNECTION"
 
-# Run migrations automatically
+# Run migrations
 echo "📦 Running migrations..."
 php artisan migrate --force
 
-# Cache config for performance
+# Cache again after migrate
 echo "⚡ Caching config..."
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-# Start nginx + php-fpm
+# Start services
 echo "🌐 Starting Nginx..."
 service nginx start
 
